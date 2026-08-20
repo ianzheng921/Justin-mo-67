@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linebreak: Stick Man War</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+    :root { --ink:#19252b; --paper:#f4f0e5; --red:#e65345; --blue:#3b78c8; --yellow:#f2b84b; --green:#55a878; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:#dce8e1; font-family:'Barlow Condensed', sans-serif; overflow-x:hidden; }
+    body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.2; background-image:radial-gradient(#537066 0.65px, transparent .65px); background-size:8px 8px; }
+    .wrap { width:min(1180px, 94vw); margin:0 auto; padding:30px 0 34px; position:relative; }
+    header { display:flex; justify-content:space-between; align-items:end; margin-bottom:20px; }
+    .kicker { font:700 12px 'Space Mono', monospace; letter-spacing:2px; text-transform:uppercase; color:#59716a; }
+    h1 { margin:2px 0 0; font-size:clamp(44px, 7vw, 78px); line-height:.84; letter-spacing:-1px; text-transform:uppercase; }
+    .sub { margin:8px 0 0; font-size:18px; color:#526760; }
+    .round { text-align:right; font:700 12px 'Space Mono', monospace; text-transform:uppercase; letter-spacing:1px; }
+    .round strong { display:block; color:var(--red); font-size:28px; line-height:1.2; }
+    .board-shell { border:3px solid var(--ink); background:var(--paper); box-shadow:8px 8px 0 var(--ink); }
+    canvas { display:block; width:100%; height:auto; background:#eee9d9; }
+    .hud { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:center; padding:14px 18px; border-top:3px solid var(--ink); background:#fffaf0; }
+    .team { display:flex; align-items:center; gap:10px; font:700 13px 'Space Mono', monospace; text-transform:uppercase; }
+    .team.enemy { justify-content:flex-end; }
+    .dot { width:13px; height:13px; border:2px solid var(--ink); display:inline-block; }
+    .dot.blue { background:var(--blue); } .dot.red { background:var(--red); }
+    .bar { height:12px; width:115px; border:2px solid var(--ink); background:#d5d0c2; } .fill { height:100%; background:var(--blue); width:100%; transition:width .25s; } .enemy .fill { background:var(--red); }
+    .vs { font:700 16px 'Space Mono', monospace; color:#958b74; }
+    .controls { display:flex; justify-content:space-between; gap:18px; margin-top:24px; align-items:start; }
+    .resources { display:flex; gap:18px; font:700 13px 'Space Mono', monospace; text-transform:uppercase; }
+    .resource strong { display:block; color:#c2871e; font-size:25px; line-height:1; margin-top:4px; }
+    .recruit-panel { margin-top:20px; padding:14px 0; border-top:3px solid var(--ink); border-bottom:3px solid var(--ink); }
+    .recruit-title { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; } .recruit-title h2 { font-size:23px; } .recruit-title span { font:700 11px 'Space Mono',monospace; color:#59716a; }
+    .recruits { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .recruit { display:flex; justify-content:space-between; align-items:center; text-align:left; background:#fffaf0; padding:10px 12px; box-shadow:2px 2px 0 #9aa99f; }
+    .recruit h3 { margin:0; font-size:19px; text-transform:uppercase; } .recruit small { display:block; color:#60736b; font:10px 'Space Mono',monospace; margin-top:2px; }
+    .recruit button { padding:7px 10px; font-size:13px; background:#d9e5df; box-shadow:3px 3px 0 var(--ink); white-space:nowrap; }
+    .hint { max-width:430px; font-size:17px; line-height:1.2; color:#526760; }
+    button { border:3px solid var(--ink); background:var(--yellow); color:var(--ink); padding:13px 20px 11px; font:800 17px 'Barlow Condensed', sans-serif; text-transform:uppercase; cursor:pointer; box-shadow:4px 4px 0 var(--ink); transition:transform .12s, box-shadow .12s, background .12s; }
+    button:hover { transform:translate(2px,2px); box-shadow:2px 2px 0 var(--ink); background:#ffca5c; } button:active { transform:translate(4px,4px); box-shadow:none; }
+    button:disabled { cursor:not-allowed; opacity:.45; transform:none; box-shadow:4px 4px 0 var(--ink); }
+    .upgrade-panel { margin-top:28px; border-top:3px solid var(--ink); padding-top:16px; }
+    .upgrade-title { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; } h2 { margin:0; font-size:28px; text-transform:uppercase; } .upgrade-title span { font:700 11px 'Space Mono', monospace; color:#59716a; }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .card { text-align:left; background:#fffaf0; padding:16px; min-height:115px; box-shadow:2px 2px 0 #9aa99f; } .card h3 { margin:0 0 4px; font-size:22px; text-transform:uppercase; } .card p { margin:0; font-size:16px; line-height:1.15; color:#60736b; } .card button { margin-top:14px; padding:8px 12px; font-size:14px; background:#d9e5df; box-shadow:3px 3px 0 var(--ink); }
+    .card button:hover { background:#c4ded2; }
+    @media (max-width:900px) { .recruits { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:650px) { .wrap { padding-top:22px; } header { align-items:start; } .sub { font-size:15px; } .round strong { font-size:23px; } .hud { gap:7px; padding:11px 9px; } .team { font-size:10px; gap:5px; } .bar { width:58px; height:10px; } .controls { align-items:stretch; flex-direction:column; gap:12px; } .controls button { width:100%; } .recruits { grid-template-columns:1fr; } .recruit { min-height:58px; } .cards { grid-template-columns:1fr; } .card { min-height:auto; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header><div><div class="kicker">Tactical sketchbook // sector 07</div><h1>Linebreak</h1><p class="sub">Deploy. Hold the line. Break theirs.</p></div><div class="round">Wave<strong id="waveLabel">01</strong></div></header>
+    <section class="board-shell">
+      <canvas id="battlefield" width="1140" height="430" aria-label="Stick man battlefield"></canvas>
+      <div class="hud"><div class="team"><i class="dot blue"></i> Blue squad <div class="bar"><div class="fill" id="blueBar"></div></div></div><div class="vs">VS</div><div class="team enemy"><div class="bar"><div class="fill" id="redBar"></div></div> Red squad <i class="dot red"></i></div></div>
+    </section>
+    <div class="controls"><div><div class="resources"><div class="resource">Gold<strong id="goldLabel">120</strong></div><div class="resource">Miners<strong id="minerLabel">2</strong></div></div><div class="hint" id="status">Mine gold, train a squad, then send them over the ridge.</div></div><button id="waveButton">Start battle <span>→</span></button></div>
+    <section class="recruit-panel"><div class="recruit-title"><h2>Build your force</h2><span>Gold pays for fighters and miners</span></div><div class="recruits"><div class="recruit"><div><h3>Swordsman</h3><small>45 gold // frontline</small></div><button data-unit="sword">Train</button></div><div class="recruit"><div><h3>Archer</h3><small>70 gold // ranged</small></div><button data-unit="archer">Train</button></div><div class="recruit"><div><h3>Guardian</h3><small>100 gold // heavy</small></div><button data-unit="guardian">Train</button></div><div class="recruit"><div><h3>Miner</h3><small>300 gold // +10 gold/sec</small></div><button id="minerButton">Buy</button></div><div class="recruit"><div><h3>Blue boss</h3><small>600 gold // 2000 HP</small></div><button id="blueBossButton">Buy</button></div></div></section>
+    <section class="upgrade-panel"><div class="upgrade-title"><h2>Choose your advantage</h2><span>Pick one before each wave</span></div><div class="cards" id="cards"></div></section>
+  </main>
+  <script>
+    const canvas = document.getElementById('battlefield');
+    const ctx = canvas.getContext('2d');
+    const waveLabel = document.getElementById('waveLabel');
+    const statusText = document.getElementById('status');
+    const waveButton = document.getElementById('waveButton');
+    const blueBar = document.getElementById('blueBar');
+    const redBar = document.getElementById('redBar');
+    const goldLabel = document.getElementById('goldLabel');
+    const minerLabel = document.getElementById('minerLabel');
+    const minerButton = document.getElementById('minerButton');
+    const blueBossButton = document.getElementById('blueBossButton');
+    const cards = document.getElementById('cards');
+    const upgrades = [
+      { name:'Long reach', text:'Blue units strike from farther away.', key:'reach' },
+      { name:'Thick heads', text:'Blue squad gains 35% more health.', key:'health' },
+      { name:'More boots', text:'Deploy two extra fighters each battle.', key:'troops' }
+    ];
+    const prices = { sword:45, archer:70, guardian:100, miner:300, boss:600 };
+    const army = { sword:{ hp:100, speed:34, damage:19, range:30, color:'#3b78c8' }, archer:{ hp:65, speed:27, damage:14, range:145, color:'#55a878' }, guardian:{ hp:190, speed:20, damage:30, range:34, color:'#c2871e' }, boss:{ hp:2000, speed:18, damage:60, range:42, color:'#1d5d9f' } };
+    let wave=1, active=false, selected=null, gold=120, miners=2, blue=[], red=[], particles=[], last=0, incomeTimer=0, spawnTimer=0;
+    const stats = { reach:0, health:1, troops:0 };
+    function renderUpgradeButtons() {
+      cards.querySelectorAll('button').forEach(button => {
+        const key = button.dataset.key;
+        const level = stats[key] || 0;
+        const upgrade = upgrades.find(u => u.key === key);
+        button.disabled = active;
+        button.textContent = selected === key ? `${upgrade.name} Lv ${level}` : `Take ${upgrade.name}`;
+      });
+    }
+    function makeCards() {
+      cards.innerHTML = upgrades.map((u,i) => `<article class="card"><h3>${u.name}</h3><p>${u.text}</p><button data-key="${u.key}">${selected === u.key ? `${u.name} Lv ${stats[u.key] || 0}` : `Take ${u.name}`}</button></article>`).join('');
+      cards.querySelectorAll('button').forEach(button => {
+        button.onclick = () => {
+          if (active) {
+            statusText.textContent = 'Upgrades are locked while the battle is live.';
+            return;
+          }
+          const key = button.dataset.key;
+          selected = key;
+          stats[key] = (stats[key] || 0) + 1;
+          renderUpgradeButtons();
+          statusText.textContent = `${upgrades.find(x => x.key === selected).name} equipped. Train your army.`;
+        };
+      });
+      renderUpgradeButtons();
+    }
+    function unit(team,x,y,type,hp) { const base=army[type]; return {team,type,x,y,hp,max:hp,speed:team==='blue'?base.speed:base.speed*.8,damage:team==='blue'?base.damage:base.damage*.8,range:base.range,hit:0,alive:true}; }
+    function recruit(type) { if(gold<prices[type]){statusText.textContent=`Not enough gold for a ${type}. Keep mining.`;return;} gold-=prices[type]; blue.push(unit('blue',65-blue.length*16,250+(blue.length%3)*40,type,army[type].hp*(stats.health?1.35:1))); statusText.textContent=`${type[0].toUpperCase()+type.slice(1)} purchased. Your army is growing.`; }
+    document.querySelectorAll('[data-unit]').forEach(button=>button.onclick=()=>recruit(button.dataset.unit));
+    function buyMiner() { if(gold<prices.miner){statusText.textContent='Not enough gold for a miner. Keep mining.';minerButton.disabled=true;return;} gold-=prices.miner;miners++;minerButton.disabled=gold<prices.miner;statusText.textContent=`Miner hired. Your crew now earns ${miners*10} gold per second.`; }
+    minerButton.onclick=buyMiner;
+    function buyBlueBoss() { if(gold<prices.boss){statusText.textContent='Not enough gold for the blue boss. Keep mining.';return;} gold-=prices.boss;blue.push(unit('blue',65,210,'boss',army.boss.hp*(stats.health?1.35:1)));statusText.textContent='Blue boss purchased and deployed!'; }
+    blueBossButton.onclick=buyBlueBoss;
+    function startWave() { if(active)return; active=true;waveButton.disabled=true;renderUpgradeButtons();if(!blue.some(fighter=>fighter.alive)){blue=[unit('blue',65,250,'sword',135),unit('blue',48,290,'sword',135),unit('blue',32,330,'archer',88)];}const count=3+wave+(stats.troops?2:0);red=Array.from({length:count},(_,i)=>unit('red',1075+i*18,230+(i%3)*42,'sword',100));red.push(unit('red',1080,190,'boss',10000));statusText.textContent=`Battle ${String(wave).padStart(2,'0')} is live. Buy reinforcements with gold.`;}
+    function drawUnit(u) { if(!u.alive)return;const c=u.team==='blue'?army[u.type].color:'#e65345';ctx.save();ctx.translate(u.x,u.y);ctx.strokeStyle='#19252b';ctx.fillStyle=c;ctx.lineWidth=u.type==='boss'?8:u.type==='guardian'?6:4;ctx.lineCap='round';ctx.beginPath();ctx.arc(0,-24,u.type==='boss'?16:9,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(0,18);ctx.moveTo(0,-5);ctx.lineTo(u.team==='blue'?17:-17,6);ctx.moveTo(0,18);ctx.lineTo(-10,38);ctx.moveTo(0,18);ctx.lineTo(11,38);ctx.stroke();ctx.fillStyle='#19252b';ctx.font='700 10px Space Mono';ctx.fillText(Math.ceil(u.hp),-13,-42);ctx.restore(); }
+    function burst(x,y,c) { for(let i=0;i<7;i++)particles.push({x,y,dx:(Math.random()-.5)*55,dy:(Math.random()-.5)*55,life:.5,c}); }
+    function update(dt) { incomeTimer+=dt;if(incomeTimer>1){gold+=miners*10;incomeTimer=0;}[...blue,...red].forEach(u=>{if(!u.alive)return;const foes=u.team==='blue'?red:blue;const target=foes.filter(f=>f.alive).sort((a,b)=>Math.abs(a.x-u.x)-Math.abs(b.x-u.x))[0];if(!target)return;const reach=u.range+(u.team==='blue'&&stats.reach?28:0);if(Math.abs(target.x-u.x)>reach)u.x+=(u.team==='blue'?1:-1)*u.speed*dt;else{u.hit-=dt;if(u.hit<=0){target.hp-=u.damage;u.hit=u.type==='archer'?1.05:.65;burst(target.x,target.y,u.team==='blue'?army[u.type].color:'#e65345');if(target.hp<=0)target.alive=false;}}});spawnTimer+=dt;if(spawnTimer>Math.max(4.5-wave*.25,2.2)){spawnTimer=0;red.push(unit('red',1075,250+(red.length%3)*40,'sword',100));}particles=particles.filter(p=>(p.life-=dt)>0);particles.forEach(p=>{p.x+=p.dx*dt;p.y+=p.dy*dt;});const b=blue.filter(u=>u.alive).length,r=red.filter(u=>u.alive).length;goldLabel.textContent=Math.floor(gold);minerLabel.textContent=miners;minerButton.disabled=gold<prices.miner;blueBossButton.disabled=gold<prices.boss;blueBar.style.width=`${Math.max(5,b/(blue.length||1)*100)}%`;redBar.style.width=`${Math.max(5,r/(red.length||1)*100)}%`;if(active&&(!b||blue.some(u=>u.alive&&u.x>1080)||!r))finish(b>0&&r===0); }
+    function finish(won) { active=false;waveButton.disabled=false;document.querySelectorAll('[data-unit]').forEach(x=>x.disabled=false);waveButton.innerHTML=won?'Next battle <span>→</span>':'Regroup <span>↻</span>';statusText.textContent=won?'Enemy monument broken. Pick an upgrade and train again.':'Your monument fell. Recruit a stronger army and regroup.';if(won){wave++;waveLabel.textContent=String(wave).padStart(2,'0');renderUpgradeButtons();} else { renderUpgradeButtons(); }}
+    function render() { ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#eee9d9';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#d5d0c2';ctx.lineWidth=2;for(let x=0;x<canvas.width;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}ctx.fillStyle='#d3c9ae';ctx.fillRect(0,385,canvas.width,45);ctx.strokeStyle='#19252b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,385);ctx.lineTo(canvas.width,385);ctx.stroke();ctx.fillStyle='#3b78c8';ctx.fillRect(28,275,16,110);ctx.fillStyle='#e65345';ctx.fillRect(canvas.width-44,275,16,110);ctx.fillStyle='#a59a7d';ctx.font='700 12px Space Mono';ctx.fillText('BLUE MONUMENT',22,28);ctx.fillText('RED MONUMENT',canvas.width-135,28);blue.concat(red).forEach(drawUnit);particles.forEach(p=>{ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,4,4);}); }
+    function loop(t) { const dt=Math.min((t-last)/1000,.05);last=t;if(active)update(dt);render();requestAnimationFrame(loop); }
+    waveButton.onclick=()=>{if(!active&&waveButton.textContent.includes('Regroup')){wave=1;waveLabel.textContent='01';blue=[];red=[];}startWave();};makeCards();requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
